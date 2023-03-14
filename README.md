@@ -9,5 +9,3 @@ As usual with addons, unpack in Interface/Addons
 
 Usage: Login and ask a bot to show it's currently equipped items (Manage Equipment - Show me your inventory)
 
-Note: If an item's name is not color coded correctly, mouseover that item's icon once and reopen the window.  
-
