@@ -49,6 +49,11 @@ local function OnChatMessage(self, event, message, sender, ...)
 			 if not texture then
                 -- item is not cached, display item name from link
                 itemName = string.match(message, "%[(.*)%]")
+				 -- extract the color code from the message and apply it to the item text
+					local colorCode = string.match(message, "|c%x%x%x%x%x%x%x%x")
+					if colorCode then
+					itemName = colorCode .. "[" .. itemName .. "]" .. "|r"
+				end
 				 -- item texture is not cached, get icon from message
 				texture = string.match(message, "|T(.-):")
             end
@@ -56,12 +61,12 @@ local function OnChatMessage(self, event, message, sender, ...)
             local itemButton = CreateFrame("Button", buttonName, itemLinkFrame, "ItemButtonTemplate")
             itemButton:SetSize(24, 24)
             itemButton:SetNormalTexture(texture)
-local normalTexture = itemButton:GetNormalTexture()
-if normalTexture then
-    local textureWidth, textureHeight = normalTexture:GetSize()
-    local ratio = itemButton:GetWidth() / textureWidth
-    normalTexture:SetSize(itemButton:GetWidth(), textureHeight * ratio)
-end
+			local normalTexture = itemButton:GetNormalTexture()
+				if normalTexture then
+					local textureWidth, textureHeight = normalTexture:GetSize()
+					local ratio = itemButton:GetWidth() / textureWidth
+					normalTexture:SetSize(itemButton:GetWidth(), textureHeight * ratio)
+				end
             itemButton:SetScript("OnEnter", function()
                 GameTooltip:SetOwner(itemButton, "ANCHOR_RIGHT")
                 GameTooltip:SetHyperlink(link)
