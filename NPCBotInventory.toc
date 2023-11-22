@@ -1,6 +1,7 @@
 ## Interface: 30300
-## Title: NPCBot Inventory Window
+## Title: NPCBotInventory
 ## Author: Twixality
-## Version: 1.0
+## Version: 1.2
+## SavedVariables: BotInventoryDB
 
-main.lua
+NPCBotInventory.lua
