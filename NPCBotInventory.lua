@@ -1,11 +1,15 @@
+local playerName = UnitName("player") -- Get the current player's name
 BotInventoryDB = BotInventoryDB or {}
+BotInventoryDB[playerName] = BotInventoryDB[playerName] or {} -- Initialize player-specific storage
 local botInventories = botInventories or {}
 
 local function LoadSavedInventories()
-    for botName, inventory in pairs(BotInventoryDB) do
-        botInventories[botName] = inventory
-		        print("Loaded inventory for bot:", botName)  -- Debugging line
-
+    -- Ensure we are loading the current player's bot inventories
+    if BotInventoryDB[playerName] then
+        for botName, inventory in pairs(BotInventoryDB[playerName]) do
+            botInventories[botName] = inventory
+            print("Loaded inventory for bot:", botName, "for player:", playerName)
+        end
     end
 end
 
@@ -225,35 +229,53 @@ local function UpdateBotList()
     botListFrame:SetHeight(math.max(100, newHeight)) -- Ensure a minimum height
 end
 
--- Add the "Clear All Bots" button here
+local playerName = UnitName("player") -- Get the current player's name
+
+-- Define the confirmation popup dialog at the beginning of your script file
+StaticPopupDialogs["CLEAR_ALL_BOTS_CONFIRMATION"] = {
+    text = "Are you sure you want to clear all bot inventories?",
+    button1 = "Yes",
+    button2 = "No",
+    OnAccept = function()
+        local playerName = UnitName("player") -- Get the current player's name
+        if BotInventoryDB[playerName] then
+            wipe(BotInventoryDB[playerName])
+        end
+        wipe(botInventories)
+        UpdateBotList()
+        print("All bot inventories cleared for player:", playerName)
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,  -- to avoid UI taint issues
+}
+
+-- Add the "Clear All Bots" button 
 local clearAllButton = CreateFrame("Button", "ClearAllBotsButton", botListFrame, "UIPanelButtonTemplate")
 clearAllButton:SetSize(160, 30)
 clearAllButton:SetPoint("BOTTOM", botListFrame, "BOTTOM", 0, 10)
 clearAllButton:SetText("Clear All Bots")
 clearAllButton:SetScript("OnClick", function()
-    wipe(BotInventoryDB)
-    wipe(botInventories)
-    UpdateBotList()
-    print("All bot inventories cleared.")
+    StaticPopup_Show("CLEAR_ALL_BOTS_CONFIRMATION")
 end)
 
 botListFrame.buttons = {}
 
--- define a function to handle chat messages
 local lastCallTime = GetTime()
+local playerName = UnitName("player") -- Get the current player's name
+
 local function OnChatMessage(self, event, message, sender, ...)
     if (event == "CHAT_MSG_MONSTER_WHISPER") then
         local currentTime = GetTime()
         local isNewBot = false
 
         if (currentTime - lastCallTime) >= 2 then
-            -- Check if the bot inventory is new
             if not botInventories[sender] then
                 isNewBot = true
-				botInventories[sender] = {} -- Initialize inventory for the new bot
+                botInventories[sender] = {} -- Initialize inventory for the new bot
             end
 
-            -- Clear the itemLinkFrame if it has been more than 2 seconds since the last call
             for i = #itemLinkFrame.buttons, 1, -1 do
                 itemLinkFrame.buttons[i]:Hide()
                 itemLinkFrame.buttons[i] = nil
@@ -265,20 +287,21 @@ local function OnChatMessage(self, event, message, sender, ...)
         end
 
         local link = string.match(message, "|H(.*)|h%[(.*)%]|h")
-        if (link) then
-            -- Save inventory information
-            table.insert(botInventories[sender], link)
-			BotInventoryDB[sender] = botInventories[sender]
+		if (link) then
+    -- Ensure the sender's inventory is initialized
+			botInventories[sender] = botInventories[sender] or {}
+			table.insert(botInventories[sender], link)
+		BotInventoryDB[playerName] = BotInventoryDB[playerName] or {}
+		BotInventoryDB[playerName][sender] = botInventories[sender] -- Store in player-specific section
+
+
             local _, itemName, quality, _, _, _, _, _, _, texture = GetItemInfo(link)
             if not texture then
-                -- Item is not cached, display item name from link
                 itemName = string.match(message, "%[(.*)%]")
-                -- Extract the color code from the message and apply it to the item text
                 local colorCode = string.match(message, "|c%x%x%x%x%x%x%x%x")
                 if colorCode then
                     itemName = colorCode .. "[" .. itemName .. "]" .. "|r"
                 end
-                -- Item texture is not cached, get icon from message
                 texture = string.match(message, "|T(.-):")
             end
 
@@ -298,7 +321,6 @@ local function OnChatMessage(self, event, message, sender, ...)
                 GameTooltip:SetHyperlink(link)
                 GameTooltip:Show()
             end)
-
             itemButton:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
@@ -323,12 +345,12 @@ local function OnChatMessage(self, event, message, sender, ...)
 
         lastCallTime = GetTime()
 
-        -- Update the bot list if it's open and a new bot was added
         if botListFrame:IsShown() and isNewBot then
             UpdateBotList()
         end
     end
 end
+
 
 -- register the OnChatMessage function for the CHAT_MSG_MONSTER_WHISPER event
 itemLinkFrame:SetScript("OnEvent", OnChatMessage)
